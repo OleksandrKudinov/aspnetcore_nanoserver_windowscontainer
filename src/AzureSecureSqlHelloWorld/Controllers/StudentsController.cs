@@ -7,9 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace AzureSecureSqlHelloWorld.Controllers
 {
     [Route("api/[controller]")]
-    public class ValuesController : Controller
+    public class StudentsController : Controller
     {
-        public ValuesController(MyAppContext context)
+        public StudentsController(MyAppContext context)
         {
             _context = context;
         }
