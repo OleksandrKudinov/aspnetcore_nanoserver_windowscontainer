@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using AzureSecureSqlHelloWorld.DB;
+using AzureSecureSqlHelloWorld.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureSecureSqlHelloWorld.Controllers
