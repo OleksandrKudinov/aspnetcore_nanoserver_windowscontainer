@@ -2,8 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
+using AzureSecureSqlHelloWorld.DB;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -16,41 +20,52 @@ namespace AzureSecureSqlHelloWorld
         {
             var builder = new ConfigurationBuilder()
                 .SetBasePath(env.ContentRootPath)
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true);
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+                //.AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true);
 
-            if (env.IsEnvironment("Development"))
-            {
-                // This will push telemetry data through Application Insights pipeline faster, allowing you to view results immediately.
-                builder.AddApplicationInsightsSettings(developerMode: true);
-            }
+            //if (env.IsEnvironment("Development"))
+            //{
+            //    builder.AddApplicationInsightsSettings(developerMode: true);
+            //}
 
             builder.AddEnvironmentVariables();
             Configuration = builder.Build();
         }
 
-        public IConfigurationRoot Configuration { get; }
-
-        // This method gets called by the runtime. Use this method to add services to the container
-        public void ConfigureServices(IServiceCollection services)
+        public IServiceProvider ConfigureServices(IServiceCollection services)
         {
-            // Add framework services.
-            services.AddApplicationInsightsTelemetry(Configuration);
-
+            //services.AddApplicationInsightsTelemetry(Configuration);
+            
             services.AddMvc();
+
+            var builder = new ContainerBuilder();
+
+            builder.RegisterInstance(this.Configuration).As<IConfigurationRoot>();
+            builder.Populate(services);
+           
+            builder.Register(c =>
+            {
+                var config = c.Resolve<IConfigurationRoot>();
+                var optionsBuilder = new DbContextOptionsBuilder<MyAppContext>();
+                optionsBuilder.UseSqlServer(config.GetConnectionString("DefaultConnection"), options => options.EnableRetryOnFailure());
+                return new MyAppContext(optionsBuilder.Options);
+            }).As<MyAppContext>();
+
+            this.ApplicationContainer = builder.Build();
+
+            return new AutofacServiceProvider(this.ApplicationContainer);
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
-
-            app.UseApplicationInsightsRequestTelemetry();
-
-            app.UseApplicationInsightsExceptionTelemetry();
-
+            //app.UseApplicationInsightsRequestTelemetry();
+            //app.UseApplicationInsightsExceptionTelemetry();
             app.UseMvc();
         }
+
+        public IConfigurationRoot Configuration { get; }
+        public IContainer ApplicationContainer { get; set; }
     }
 }
